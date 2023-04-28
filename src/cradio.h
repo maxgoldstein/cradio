@@ -12,8 +12,8 @@
 #include <pcap/pcap.h>
 
 #define ETHER_ADDR_LEN 6
-#define PACKETS_PER_BURST 32
-#define BURST_SIZE  4
+#define PACKETS_PER_BURST 1
+#define BURST_SIZE  1
 #define SLEEP_TIME_MS 250
 
 #define BROADCAST_MAC "ff:ff:ff:ff:ff:ff"

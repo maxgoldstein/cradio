@@ -55,7 +55,11 @@ void set_deauth_fields(IEEE80211_generic_t *pkt)
 {
     if (pkt == NULL)
 	return;
-    pkt->frame_control = 0x00C0;
+    pkt->frame_control = 0x00c0;
+    //srand(time(0));
+    //int r = (rand() % 256) << 8;
+    //int t = (rand() % 256);
+    //pkt->frame_control = r|t;
     pkt->duration_id = 0x013A;
     pkt->seq_ctl = 0x0000;
     pkt->reason_code = 0x0007;

@@ -5,7 +5,7 @@
 uint32_t calc_crc(uint8_t *inp, uint32_t len)
 {
     uint32_t crc = 0xffffffff;
-    for (int i = 0; i < len; i++)
+    for (uint32_t i = 0; i < len; i++)
 	crc = crc_tbl[(crc ^ inp[i]) & 0xff] ^ (crc >> 8);
     
     crc = ~crc;
@@ -14,12 +14,12 @@ uint32_t calc_crc(uint8_t *inp, uint32_t len)
 
 void mac_to_bytes(uint8_t *inp, uint8_t *outp)
 {
-    outp[0] = (uint8_t)(strtol(inp+0, NULL, 16) & 0xff);
-    outp[1] = (uint8_t)(strtol(inp+3, NULL, 16) & 0xff);
-    outp[2] = (uint8_t)(strtol(inp+6, NULL, 16) & 0xff);
-    outp[3] = (uint8_t)(strtol(inp+9, NULL, 16) & 0xff);
-    outp[4] = (uint8_t)(strtol(inp+12, NULL, 16) & 0xff);
-    outp[5] = (uint8_t)(strtol(inp+15, NULL, 16) & 0xff);
+    outp[0] = (uint8_t)(strtol((const char*)inp+0, NULL, 16) & 0xff);
+    outp[1] = (uint8_t)(strtol((const char*)inp+3, NULL, 16) & 0xff);
+    outp[2] = (uint8_t)(strtol((const char*)inp+6, NULL, 16) & 0xff);
+    outp[3] = (uint8_t)(strtol((const char*)inp+9, NULL, 16) & 0xff);
+    outp[4] = (uint8_t)(strtol((const char*)inp+12, NULL, 16) & 0xff);
+    outp[5] = (uint8_t)(strtol((const char*)inp+15, NULL, 16) & 0xff);
     
 }
 
@@ -87,7 +87,7 @@ void update_seqn(uint8_t *pkt, uint64_t seqn)
 
 void IEEE80211_frame_send(IEEE80211_generic_t *client_pkt, IEEE80211_generic_t *ap_pkt, pcap_t *handle, int64_t max_count)
 {
-    int pktlen = 30 + sizeof(radiotap_header);
+    size_t pktlen = 30 + sizeof(radiotap_header);
     uint64_t n_pkts_sent = 0;
     uint8_t *client_pkt_bytestr = (uint8_t*) malloc(pktlen);
     uint8_t *ap_pkt_bytestr = (uint8_t*) malloc(pktlen);
@@ -107,7 +107,7 @@ void IEEE80211_frame_send(IEEE80211_generic_t *client_pkt, IEEE80211_generic_t *
     sleeptime.tv_sec = 0;
     sleeptime.tv_nsec = SLEEP_TIME_MS * 1000000;
     
-    while (n_pkts_sent < max_count || max_count < 0) {
+    while (n_pkts_sent < (uint64_t)max_count || max_count < 0) {
 	if (n_pkts_sent % (PACKETS_PER_BURST * BURST_SIZE) == 0)
 	    printf("[+] %d packets sent.\n", (PACKETS_PER_BURST * BURST_SIZE));
 	if (n_pkts_sent % PACKETS_PER_BURST == 0)
@@ -130,33 +130,48 @@ int main(int argc, char* argv[])
     uint8_t iface[] = DEFAULT_IFACE;
     int64_t n_pkts = -1, args_iface = 0, args_ap_mac = 0, args_cl_mac = 0;
     
-    //IEEE80211_generic_t  client_pkt = {};
-    //IEEE80211_generic_t  ap_pkt = {};
+    uint8_t cl_mac[] = BROADCAST_MAC;
+    uint8_t ap_mac[] = BROADCAST_MAC;
+    uint8_t errbuf[100];
     
+
+    /* suppress unused variable warnings */
+    (void)args_iface;
+    (void)args_ap_mac;
+    (void)argc;
+    (void)argv;
+
+    /* declare and alloc memory for two IEEE80211 frames */
     IEEE80211_generic_t *client_pkt;
     IEEE80211_generic_t *ap_pkt;
     client_pkt = (IEEE80211_generic_t*)malloc(sizeof(IEEE80211_generic_t));
     ap_pkt = (IEEE80211_generic_t*)malloc(sizeof(IEEE80211_generic_t));
+    
+    /* zero the frames */
     memset(ap_pkt, 0x00, sizeof(IEEE80211_generic_t));
     memset(client_pkt, 0x00, sizeof(IEEE80211_generic_t));
-    uint8_t cl_mac[] = BROADCAST_MAC;
-    uint8_t ap_mac[] = BROADCAST_MAC;
-    
+   
+    /* copy in MAC address fields */ 
     mac_to_bytes(ap_mac, client_pkt->src_addr);
     mac_to_bytes(ap_mac, client_pkt->bssid);
     mac_to_bytes(ap_mac, ap_pkt->dest_addr);
     mac_to_bytes(ap_mac, ap_pkt->bssid);
-
     mac_to_bytes(cl_mac, client_pkt->dest_addr);
     mac_to_bytes(cl_mac, ap_pkt->src_addr);
-    args_cl_mac = 1;
+    
+    args_cl_mac |= 1;
     n_pkts = -1;
+    
     preprocess_frames(client_pkt, ap_pkt);
-    uint8_t errbuf[100];
-    pcap_t *handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf);
+    
+    pcap_t *handle = pcap_open_live((const char*)iface, BUFSIZ, 1, 1000, (char*)errbuf);
+    
     if (handle == NULL)
 	printf("Error opening pcap handle: %s\n", errbuf);
+    
     IEEE80211_frame_send(client_pkt, ap_pkt, handle, n_pkts);
+    
+    /* cleanup */
     pcap_close(handle);
     free(client_pkt);
     free(ap_pkt);

